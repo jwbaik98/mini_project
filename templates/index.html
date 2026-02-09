@@ -1,0 +1,83 @@
+
+# 웹페이지
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Yellow-YOLO 관제 시스템</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { width: 90%; max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 15px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        .video-box { border: 8px solid #333; border-radius: 10px; overflow: hidden; display: inline-block; background: #000; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; background: white; }
+        th, td { border-bottom: 1px solid #eee; padding: 15px; text-align: center; }
+        th { background-color: #ffcc00; color: #333; font-weight: bold; }
+        .v-img { width: 120px; height: auto; border-radius: 5px; transition: 0.2s; border: 1px solid #ddd; }
+        .v-img:hover { transform: scale(1.5); z-index: 10; position: relative; }
+        .badge { background: #ff4d4f; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🟡 Yellow-YOLO 실시간 스쿨존 관제</h1>
+        
+        <div class="video-box">
+            <img src="{{ url_for('video_feed') }}" width="640" height="360">
+        </div>
+
+        <h2>📋 위반 차량 실시간 리스트 (자동 갱신)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>시간</th>
+                    <th>위반 내역</th>
+                    <th>차량 번호(ID)</th>
+                    <th>증거 스냅샷</th>
+                </tr>
+            </thead>
+            <tbody id="violation-table">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        function fetchViolations() {
+            fetch('/api/violations')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('violation-table');
+                    tbody.innerHTML = ''; // 기존 리스트 비우기
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">위반 내역이 없습니다.</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(v => {
+                        const row = `
+                            <tr>
+                                <td>${v.timestamp}</td>
+                                <td><span class="badge">${v.type}</span></td>
+                                <td><strong>ID: ${v.object_id}</strong></td>
+                                <td>
+                                    <a href="${v.image_path}" target="_blank">
+                                        <img src="${v.image_path}" class="v-img">
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(err => console.error('데이터 갱신 오류:', err));
+        }
+
+        // 2초마다 서버에서 최신 위반 내역을 가져옴
+        setInterval(fetchViolations, 2000);
+        // 페이지 로드 시 즉시 실행
+        fetchViolations();
+    </script>
+</body>
+</html>
